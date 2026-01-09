@@ -32,8 +32,7 @@
 # Scaling (NMDS) using the BCI tree community dataset and explore
 # patterns in species composition among sites.
 
-data("BCI")
-data("BCI.env")
+data("BCI", "BCI.env")
 
 # 1. Using the BCI dataset, calculate a dissimilarity matrix
 #    (e.g., Bray-Curtis) and perform NMDS.

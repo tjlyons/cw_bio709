@@ -6,6 +6,10 @@
 
 # lab ---------------------------------------------------------------------
 
+# ============================================================
+# EXERCISE: GLMM Exercise - `sleep` Data Set
+# ============================================================
+
 # ------------------------------------------------------------
 # sleep dataset (built-in R dataset)
 #
@@ -42,6 +46,13 @@
 #   - Drug (group) represents the treatment of interest
 #   - Subject ID represents repeated measurements on the same
 #     individuals
+
+# ============================================================
+# EXERCISE: GLMM Exercise - `grouseticks` Data Set
+# ============================================================
+
+library(lme4)
+data("grouseticks")
 
 # ------------------------------------------------------------
 # grouseticks dataset (from lme4 package)

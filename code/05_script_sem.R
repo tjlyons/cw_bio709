@@ -12,6 +12,21 @@
 library(piecewiseSEM)
 data("keeley")
 
+# The "keeley" dataset contains fire-related vegetation data
+# collected from shrublands in California.
+#
+# ------------------------------------------------------------
+# Column descriptions:
+# elev  : Elevation of the site
+# slope : Slope steepness
+# aspect: Slope aspect (orientation)
+# heat  : Heat load index (a function of slope and aspect)
+# firesev: Fire severity
+# age   : Time since last fire
+# cover : Vegetation cover
+# rich  : Plant species richness
+# ------------------------------------------------------------
+#
 # In this exercise, you will explore relationships among variables
 # using covariance and path analysis. You will replicate a published
 # path model and propose an alternative.
