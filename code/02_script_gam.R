@@ -148,11 +148,7 @@ view(df_bat)
 # 1. Format column names
 #   - Convert column names to a clean format
 
-pacman::p_load(janitor,
-               lubridate)
-
-df_bat <- clean_names(df_bat) %>% 
-  mutate(date = mdy(date))
+df_bat <- janitor::clean_names(df_bat)
 
 # 2. Examine each column carefully
 #   - Check for missing values, inconsistent formats, and typos
@@ -161,6 +157,15 @@ df_bat <- clean_names(df_bat) %>%
 #   - Remove or correct invalid or unusable records as needed
 
 str(df_bat)
+summary(df_bat)
+
+table(df_bat$auto_id, useNA = "ifany")
+
+library(lubridate)
+
+df_bat <- df_bat %>% 
+  mutate(date = mdy(date)) %>% 
+  filter(!is.na(auto_id))
 
 # New derived columns to create:
 # Site-level categories:
@@ -172,10 +177,21 @@ str(df_bat)
 #     "prairie" = RECCON, RECWET
 #     "woody"   = WOODCON, WOODWET
 
+sites <- tibble( # This is the only way I could figure out how to do this :)
+  site = c("RECCON", "RECCWET", "WOODCON", "WOODWET"),
+  habitat_type = c("prairie", "prairie", "woody", "woody"),
+  wetland_status = c("no_wetland", "wetland", "no_wetland", "wetland")
+)
+
+df_bat <- df_bat %>% 
+  left_join(sites, by = "site")
+
 # 4. wetland_status
 #   Presence/absence of wetland:
 #     "no_wetland" = RECCON, WOODCON
 #     "wetland"    = RECWET, WOODWET
+
+# Done above
 
 # ============================================================
 # GOAL 2: Visualize daily bat activity
@@ -191,6 +207,24 @@ str(df_bat)
 #   - Optionally:
 #       * Color or facet plots by site
 #       * Smooth trends to visualize seasonal patterns
+
+df_daily_bats <- df_bat %>% 
+  group_by(site, date, habitat_type, wetland_status) %>% 
+  summarize(daily_passes = n())
+view(df_daily_bats)
+
+df_daily_bats <- df_daily_bats %>% 
+  mutate(julian_date = yday(date))
+head(df_daily_bats)
+
+df_daily_bats %>%  
+  ggplot(aes(x = julian_date,
+             y = daily_passes,
+             color = site)) +
+  geom_point(alpha = 0.25) +
+  labs(x = "Julian Date",
+       y = "Daily Bat Passes",
+       color = "Site")
 
 # ============================================================
 # GOAL 3: Model differences among sites
@@ -209,3 +243,22 @@ str(df_bat)
 #       * site (four-level factor)
 #       * Julian date (to account for seasonality)
 #   - Consider appropriate count models
+
+# Not sure if I did this right, but everything worked. If not, let me know!
+
+gam_bats <- gam(daily_passes ~ s(julian_date) + site + habitat_type + wetland_status,
+                by = wetland_status,
+                family = poisson, # daily passes is count data ?
+                data = df_daily_bats)
+summary(gam_bats)
+
+df_pred_bats <- ggpredict(gam_bats,
+                         terms = c(
+                           "julian_date [all]",
+                           "site [all]",
+                           "habitat_type[all]",
+                           "wetland_status[all]")) %>% 
+  as_tibble() %>% 
+  rename(site = group,
+         julian_date = x)
+view(df_pred_bats) 
