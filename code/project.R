@@ -2,14 +2,15 @@ pacman::p_load(tidyverse,
                glmmTMB,
                lme4,
                janitor,
-               patchwork)
+               patchwork,
+               performance,
+               MASS)
 
-df_summer <- read_csv("su25biomass1.csv")  %>% 
+df_summer <- read_csv("C:\\Users\\teaml\\OneDrive\\Documents\\bio709\\cw_bio709\\code\\su25biomass1.csv")  %>% 
   as_tibble() %>% 
-  select(-Nodule_num) %>% 
   janitor::clean_names()
  
-df_fall <- read_csv("fa25biomass1.csv") %>% 
+df_fall <- read_csv("C:\\Users\\teaml\\OneDrive\\Documents\\bio709\\cw_bio709\\code\\fa25biomass1.csv") %>% 
   as_tibble() %>% 
   janitor::clean_names()
 
@@ -58,61 +59,69 @@ df_fall %>%
 ## Linear Models
 
 # total aboveground biomass
-m_sum_agb <- lm(total_agb~ treatment + beetle,
+m_sum_agb <- lm(total_agb~ treatment * beetle,
                 data = df_summer)
-summary(m_sum_agb) # *treatment: p = 0.0303, slope = 5.121
+summary(m_sum_agb) # * No sig relationship
 
-m_fall_agb <- lm(total_agb~ treatment + beetle,
+m_fall_agb <- lm(total_agb~ treatment * beetle,
                 data = df_fall)
-summary(m_fall_agb) # ***treatment: p = 1.57e-9, slope = 11.313
+summary(m_fall_agb) # ***treatment: p = 7.56e-12, slope = 9.879
 
 # total belowground biomass
-m_sum_bgb <- lm(total_bgb ~ treatment + beetle,
+m_sum_bgb <- lm(total_bgb ~ treatment * beetle,
                 data = df_summer)
-summary(m_sum_bgb) # No significant effect
-m_fall_bgb <- lm(total_bgb ~ treatment + beetle,
-                data = df_summer)
+summary(m_sum_bgb) # microplastics only sig, 0.0274,  slope = 3.2449
+m_fall_bgb <- lm(total_bgb ~ treatment * beetle,
+                data = df_fall)
 summary(m_fall_bgb) # No significant effect
 
 # seed weight
-m_sum_seedwt <- lm(seed_weight ~ treatment + beetle,
+m_sum_seedwt <- lm(seed_weight ~ treatment * beetle,
                     data = df_summer)
-summary(m_sum_seedwt) # ***Microplastics: p = 2.68-5, slope = 3.145,
-                      # *Beetles: p = 0.0256, slope = -1.8568
-m_fall_seedwt <- lm(seed_weight ~ treatment + beetle,
+summary(m_sum_seedwt) # * beetle, 0.0347 slope = -2.4883
+m_fall_seedwt <- lm(seed_weight ~ treatment * beetle,
                    data = df_fall)
-summary(m_fall_seedwt) # ***Microplastics: p = 4.08e-7, slope = 3.149,
-                       # *Beetles: p = 0.0165, slope = 1.3375
+summary(m_fall_seedwt) # ***Microplastics: p = 0.00311, slope = 2.6687
 
-## Generalized Linear Mixed-Effects Model, poisson vs negative binom
+## Generalized Linear Model, poisson vs negative binom
 
 # pod count
-m_s_pod_num <- glmmTMB(pod_num ~ treatment + beetle + (1 | plant_id),
+m_s_pod_num_pois <- glm(pod_num ~ treatment * beetle,
                      data = df_summer,
                      family = poisson)
-m_f_pod_num <- glmmTMB(pod_num ~ treatment + beetle + (1 | plant_id),
+m_f_pod_num_pois <- glm(pod_num ~ treatment * beetle,
                          data = df_fall,
                          family = poisson)
 
-sum(residuals(m_s_pod_num, type = "pearson")^2) / df.residual(m_s_pod_num) # 0.576
-sum(residuals(m_f_pod_num, type = "pearson")^2) / df.residual(m_f_pod_num) # 1.005
+performance::check_overdispersion(m_s_pod_num_pois) # overdispersed 
+performance::check_overdispersion(m_f_pod_num_pois) # NOT overdispersed
 
-summary(m_s_pod_num) # ** Treatment: p = 0.0067, slope = 0.1684
-summary(m_f_pod_num) # *** Treatment: p= 4.02e-14, slope = 0.4216
+m_s_pod_num_nb <- MASS::glm.nb(pod_num ~ treatment * beetle,
+                        data = df_summer)
+
+summary(m_s_pod_num_nb) 
+summary(m_f_pod_num_pois) 
 
 # seed count
-m_s_seed_num <- glmmTMB(seed_num ~ treatment + beetle + (1 | plant_id),
-                         data = df_summer,
-                         family = poisson)
-m_f_seed_num <- glmmTMB(seed_num ~ treatment + beetle + (1 | plant_id),
-                         data = df_fall,
-                         family = poisson)
 
-sum(residuals(m_s_seed_num, type = "pearson")^2) / df.residual(m_s_seed_num) # 0.354
-sum(residuals(m_f_seed_num, type = "pearson")^2) / df.residual(m_f_seed_num) # 0.518
+m_s_seed_num_pois <- glm(seed_num ~ treatment * beetle,
+                        data = df_summer,
+                        family = poisson)
+m_f_seed_num_pois <- glm(seed_num ~ treatment * beetle,
+                        data = df_fall,
+                        family = poisson)
 
-summary(m_s_seed_num) # *** Treatment: p = 0.00092, slope = 0.2336
-summary(m_f_seed_num) # *** Treatment: p= 1.54e-11, slope = 0.4335
+performance::check_overdispersion(m_s_seed_num_pois) # overdispersed 
+performance::check_overdispersion(m_f_seed_num_pois) # overdispersed
+
+m_s_seed_num_nb <- MASS::glm.nb(seed_num ~ treatment * beetle,
+                               data = df_summer)
+
+m_f_seed_num_nb <- MASS::glm.nb(seed_num ~ treatment * beetle,
+                               data = df_fall)
+
+summary(m_s_seed_num_nb) # No significant effect
+summary(m_f_seed_num_nb) # Treatment: 3.16e-05, slope = 0.439745
 
 ## Visualization
 
